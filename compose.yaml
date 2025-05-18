@@ -1,0 +1,47 @@
+version: '3.8' # Compose dosya formatının versiyonu
+
+services:
+  # Web Servisi
+  web:
+    build: . # Dockerfile'ı bu dizinde ara ve imajı oluştur
+    ports:
+      - "5000:5000" # Host port 5000'i container port 5000'e eşle
+    environment:
+      # Web uygulaması için veritabanı bağlantı URL'si
+      DATABASE_URL: postgresql://postgres:password1@db:5432/mydatabase
+    depends_on:
+      - db # Web servisi başlamadan önce db servisinin başlamasını sağlar
+    networks:
+      - my-app-network # Servisi özel network'ümüze dahil et
+
+  # Veritabanı Servisi (PostgreSQL)
+  db:
+    image: postgres:17.5 # Resmi PostgreSQL 13 imajını kullan
+    ports:
+      - "5400:5432" # Opsiyonel: Eğer veritabanına host'tan erişmek isterseniz (debugging vb.)
+                     # ÖNEMLİ: compose.yaml içindeki DATABASE_URL'de container port'u (5432) değil,
+                     # web service'in network içinden erişeceği portu (varsayılan 5432) kullanmalıydık.
+                     # Ancak port mapping host:container şeklindedir.
+                     # Web servisi, 'db' hostname'i üzerinden doğrudan db container'ının 5432 portuna erişir.
+                     # Bu yüzden web servisi için DATABASE_URL'deki port 5432 olmalıydı.
+                     # Yukarıdaki DATABASE_URL'i düzeltelim: postgresql://user:password@db:5432/mydatabase
+                     # Host'tan erişim portu (5400) web service'in kullandığı portu etkilemez.
+                     # Düzeltilmiş DATABASE_URL'i web servisi environment bölümünde görebilirsiniz.
+                     # Host'tan erişim için 5400:5432 mappingini bıraktık.
+    environment:
+      POSTGRES_DB: mydatabase # Veritabanı adı
+      POSTGRES_USER: postgres     # Veritabanı kullanıcısı
+      POSTGRES_PASSWORD: password1 # Veritabanı parolası
+    volumes:
+      - db-data:/var/lib/postgresql/data # Veritabanı verilerini kalıcı hale getirmek için volume kullan
+    networks:
+      - my-app-network # Servisi özel network'ümüze dahil et
+
+# Volume Tanımı
+volumes:
+  db-data: # Veritabanı verileri için kullanılacak volume'ün adı
+
+# Network Tanımı
+networks:
+  my-app-network:
+    driver: bridge # Varsayılan bridge network sürücüsünü kullan
